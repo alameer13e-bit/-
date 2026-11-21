@@ -58,7 +58,7 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none
 .exam{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
 .exam:last-child{border-bottom:0}
 .exam .n{flex:1;font-weight:700}
-.days{min-width:64px;text-align:center;border-radius:12px;padding:6px 8px;background:var(--soft);font-weight:800}
+.days{min-width:84px;font-size:14px;text-align:center;border-radius:12px;padding:6px 8px;background:var(--soft);font-weight:800}
 .days small{display:block;font-weight:500;color:var(--muted);font-size:12px}
 .days.soon{background:var(--warm);color:#2A1F4D}
 .days.soon small{color:#2A1F4D}
@@ -77,10 +77,21 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none
 <main>
   <!-- اليوم -->
   <section id="s-today" class="on">
+    <div class="card" id="nextExam" style="display:none">
+      <div class="row" style="justify-content:space-between;flex-wrap:nowrap">
+        <div id="nextName" style="font-weight:700"></div>
+        <div class="days" id="nextLeft"></div>
+      </div>
+    </div>
     <div class="card timer" id="timerCard">
+      <div class="row" style="justify-content:center;margin-bottom:8px">
+        <label style="display:flex;align-items:center;gap:6px">مذاكرة <input id="wMin" type="number" min="1" max="180" inputmode="numeric" style="width:70px;text-align:center"> د</label>
+        <label style="display:flex;align-items:center;gap:6px">راحة <input id="rMin" type="number" min="1" max="60" inputmode="numeric" style="width:70px;text-align:center"> د</label>
+      </div>
       <div class="mode" id="mode">وقت المذاكرة</div>
       <div class="time" id="time">25:00</div>
       <div class="ring"><i id="bar"></i></div>
+      <div class="count" id="range" style="margin:0 0 12px"></div>
       <div class="row">
         <select id="timerSub" aria-label="المادة"></select>
         <button class="btn" id="startBtn">ابدأ</button>
@@ -203,15 +214,19 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none
   };
 
   /* slots */
+  function fmt12(t){
+    var p=t.split(":"),h=+p[0],m=p[1];
+    var suffix=h>=12?"م":"ص";
+    h=h%12;if(h===0)h=12;
+    return h+":"+m+" "+suffix;
+  }
   function slotItem(s){
     var li=el("li","item"+(s.done?" done":""));
     var lb=el("label");var cb=document.createElement("input");cb.type="checkbox";cb.checked=!!s.done;
     cb.onchange=function(){s.done=cb.checked;save();renderAll();};
     lb.appendChild(cb);lb.appendChild(el("span","t",s.subject));
     li.appendChild(lb);
-if(s.time)li.appendChild(el("span","chip",
-  (+s.time.slice(0,2)%12||12)+s.time.slice(2)+
-  (+s.time.slice(0,2)>=12?" م":" ص")));
+    if(s.time)li.appendChild(el("span","chip",fmt12(s.time)));
     var x=el("button","x","×");x.setAttribute("aria-label","حذف الحصة");
     x.onclick=function(){S.slots=S.slots.filter(function(q){return q.id!==s.id;});save();renderAll();};
     li.appendChild(x);return li;
@@ -256,18 +271,32 @@ if(s.time)li.appendChild(el("span","chip",
   $("taskIn").addEventListener("keydown",function(e){if(e.key==="Enter")addTask();});
 
   /* exams */
-  function renderExams(){
+  function daysTo(date){var t=new Date();t.setHours(0,0,0,0);return Math.round((new Date(date+"T00:00:00")-t)/86400000);}
+  function leftText(n){return n===0?"اليوم":n===1?"بكرة":n===2?"باقي يومين":"باقي "+n+(n<=10?" أيام":" يوم");}
+  function renderNext(){
+    var c=$("nextExam"),best=null,bd=1e9;
+    S.exams.forEach(function(x){var d=daysTo(x.date);if(d>=0&&d<bd){bd=d;best=x;}});
+    if(!best){c.style.display="none";return;}
+    c.style.display="block";
+    $("nextName").textContent="أقرب اختبار: "+best.subject;
+    $("nextLeft").textContent=leftText(bd);
+    $("nextLeft").className="days"+(bd<=3?" soon":"");
+  }
+  function renderExams(){renderNext();
     var box=$("exams");box.textContent="";
     var today=new Date();today.setHours(0,0,0,0);
     var list=S.exams.slice().sort(function(a,b){return a.date<b.date?-1:1;});
     if(!list.length)box.appendChild(el("div","empty","ما في اختبارات مضافة."));
     list.forEach(function(x){
       var d=new Date(x.date+"T00:00:00");var diff=Math.round((d-today)/86400000);
-      var row=el("div","exam");row.appendChild(el("div","n",x.subject));
+      var row=el("div","exam");
+      var nm=el("div","n",x.subject);
+      var dt=el("small",null,d.toLocaleDateString("ar",{weekday:"long",day:"numeric",month:"long"}));
+      dt.style.display="block";dt.style.fontWeight="400";dt.style.color="var(--muted)";nm.appendChild(dt);row.appendChild(nm);
       var b=el("div","days"+(diff>=0&&diff<=3?" soon":""));
       if(diff<0){b.textContent="مضى";}
       else if(diff===0){b.textContent="اليوم";}
-      else{b.textContent=diff;b.appendChild(el("small",null,diff===1?"يوم":"أيام"));}
+      else{b.textContent=leftText(diff);}
       row.appendChild(b);
       var rm=el("button","x","×");rm.setAttribute("aria-label","حذف الاختبار");
       rm.onclick=function(){S.exams=S.exams.filter(function(q){return q.id!==x.id;});save();renderExams();};
@@ -280,8 +309,13 @@ if(s.time)li.appendChild(el("span","chip",
   };
 
   /* pomodoro */
-  var WORK=25*60,REST=5*60,phase="work",left=WORK,total=WORK,tick=null;
+  var WORK=(S.work||25)*60,REST=(S.rest||5)*60,phase="work",left=WORK,total=WORK,tick=null,startedAt=0;
   function fmt(n){var m=Math.floor(n/60),s=n%60;return (m<10?"0":"")+m+":"+(s<10?"0":"")+s;}
+  function clock(ms){var d=new Date(ms),h=d.getHours(),m=d.getMinutes();return (h%12||12)+":"+(m<10?"0":"")+m+(h>=12?" م":" ص");}
+  function drawRange(){
+    var n=Date.now(),end=n+left*1000;
+    $("range").textContent=tick?("من "+clock(startedAt)+" إلى "+clock(end)):("لو بدأتي الحين: من "+clock(n)+" إلى "+clock(end));
+  }
   function drawTimer(){
     $("time").textContent=fmt(left);
     $("bar").style.width=(100*(total-left)/total)+"%";
@@ -289,8 +323,9 @@ if(s.time)li.appendChild(el("span","chip",
     $("timerCard").classList.toggle("rest",phase==="rest");
     $("startBtn").textContent=tick?"إيقاف مؤقت":"ابدأ";
     var n=S.pomos[dkey(now)]||0;
-    $("count").textContent=n?("جلسات اليوم: "+n+" ("+(n*25)+" دقيقة)"):"ابدئي أول جلسة اليوم";
+    $("count").textContent=n?("جلسات اليوم: "+n):"ابدئي أول جلسة اليوم";
     document.title=tick?fmt(left)+" · برنامج المذاكرة":"برنامج المذاكرة";
+    drawRange();
   }
   function beep(){
     try{var a=new (window.AudioContext||window.webkitAudioContext)();var o=a.createOscillator(),g=a.createGain();
@@ -307,8 +342,18 @@ if(s.time)li.appendChild(el("span","chip",
     }
     drawTimer();
   }
+  $("wMin").value=WORK/60;$("rMin").value=REST/60;
+  function applyMins(){
+    var w=Math.max(1,Math.min(180,parseInt($("wMin").value,10)||25)),r=Math.max(1,Math.min(60,parseInt($("rMin").value,10)||5));
+    $("wMin").value=w;$("rMin").value=r;
+    S.work=w;S.rest=r;save();WORK=w*60;REST=r*60;
+    if(!tick){total=left=(phase==="work"?WORK:REST);}
+    drawTimer();
+  }
+  $("wMin").onchange=applyMins;$("rMin").onchange=applyMins;
+  setInterval(function(){if(!tick)drawRange();},15000);
   $("startBtn").onclick=function(){
-    if(tick){clearInterval(tick);tick=null;}else{tick=setInterval(step,1000);}
+    if(tick){clearInterval(tick);tick=null;}else{startedAt=Date.now();tick=setInterval(step,1000);}
     drawTimer();
   };
   $("resetBtn").onclick=function(){clearInterval(tick);tick=null;phase="work";total=left=WORK;drawTimer();};
