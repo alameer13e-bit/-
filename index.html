@@ -209,7 +209,9 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none
     cb.onchange=function(){s.done=cb.checked;save();renderAll();};
     lb.appendChild(cb);lb.appendChild(el("span","t",s.subject));
     li.appendChild(lb);
-    if(s.time)li.appendChild(el("span","chip",s.time));
+if(s.time)li.appendChild(el("span","chip",
+  (+s.time.slice(0,2)%12||12)+s.time.slice(2)+
+  (+s.time.slice(0,2)>=12?" م":" ص")));
     var x=el("button","x","×");x.setAttribute("aria-label","حذف الحصة");
     x.onclick=function(){S.slots=S.slots.filter(function(q){return q.id!==s.id;});save();renderAll();};
     li.appendChild(x);return li;
