@@ -74,6 +74,10 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none
 .term{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid var(--line);margin-top:10px;padding-top:10px;font-size:15px}
 .term span:first-child{color:var(--muted)}
 .term span:last-child{font-weight:700}
+.gr{display:flex;flex-wrap:wrap;gap:8px}
+.gr button{border:1px solid var(--line);background:var(--soft);color:var(--ink);font:inherit;font-size:14px;border-radius:12px;padding:6px 14px;cursor:pointer}
+.gr button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+.gr-sub{margin:14px 0 8px;color:var(--muted);font-size:14px}
 @media (prefers-reduced-motion: reduce){.ring i{transition:none}}
 </style>
 </head>
@@ -179,6 +183,19 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none
   <!-- المواد -->
   <section id="s-subjects">
     <div class="card">
+      <h2>اختر الصف</h2>
+      <div class="gr" id="grades"></div>
+      <div id="trackBox" style="display:none">
+        <div class="gr-sub">المسار</div>
+        <div class="gr" id="tracks"></div>
+      </div>
+      <p class="note" id="gradeNote"></p>
+      <div class="row" id="gradeAsk" style="display:none">
+        <button class="btn" id="askYes">استبدال</button>
+        <button class="btn ghost" id="askNo">إلغاء</button>
+      </div>
+    </div>
+    <div class="card">
       <h2>موادي</h2>
       <div class="row">
         <input id="subIn" placeholder="اسم مادة جديدة" aria-label="مادة جديدة">
@@ -231,6 +248,57 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none
       if(cur)s.value=cur;
     });
     var w=$("wDay");if(!w.options.length){DAYS.forEach(function(d,i){var o=el("option",null,d);o.value=i;w.appendChild(o);});w.value=now.getDay();}
+  }
+
+  /* grades */
+  var GR=["الرابع","الخامس","السادس","السابع","الثامن","التاسع","العاشر","الحادي عشر","الثاني عشر"];
+  var DEF=["اللغة العربية","اللغة الإنجليزية","الرياضيات","العلوم","الاجتماعيات","التربية الإسلامية"];
+  var BASE=["اللغة العربية","اللغة الإنجليزية","التربية الإسلامية","القرآن الكريم","الحاسوب"];
+  var SCI=["الرياضيات","الفيزياء","الكيمياء","الأحياء"];
+  function preset(g,t){
+    var i=GR.indexOf(g),x;
+    if(i<6)x=["الرياضيات","العلوم","الاجتماعيات"];
+    else if(g==="الثاني عشر")x=t==="علمي"?SCI.concat(["الدستور"]):["الرياضيات","التاريخ","الجغرافيا","الفلسفة","الدستور"];
+    else if(g==="الحادي عشر")x=t==="علمي"?SCI:["الرياضيات","التاريخ","الجغرافيا","علم النفس"];
+    else x=t==="علمي"?SCI:["الرياضيات","التاريخ","الجغرافيا","علم النفس","الفلسفة"];
+    return BASE.concat(x);
+  }
+  function same(a,b){return a.length===b.length&&a.slice().sort().join("|")===b.slice().sort().join("|");}
+  var selG=S.grade||"",selT=S.track||"";
+  var pending=null;
+  function doApply(p){
+    S.grade=selG;S.track=p.hi?selT:"";S.subjects=p.list;S.preset=p.list.slice();
+    pending=null;save();renderAll();
+  }
+  function tryApply(){
+    var hi=GR.indexOf(selG)>=6;
+    pending=null;
+    if(hi&&!selT){renderGrades();return;}
+    var list=preset(selG,selT);
+    if(same(S.subjects,S.preset||DEF)){doApply({list:list,hi:hi});return;}
+    pending={list:list,hi:hi};
+    renderGrades();
+  }
+  $("askYes").onclick=function(){if(pending)doApply(pending);};
+  $("askNo").onclick=function(){pending=null;selG=S.grade||"";selT=S.track||"";renderGrades();};
+  function renderGrades(){
+    var g=$("grades");g.textContent="";
+    GR.forEach(function(k){
+      var b=el("button",k===selG?"on":"",k);
+      b.onclick=function(){selG=k;if(GR.indexOf(k)<6)selT="";tryApply();};
+      g.appendChild(b);
+    });
+    var hi=GR.indexOf(selG)>=6;
+    $("trackBox").style.display=hi?"block":"none";
+    var t=$("tracks");t.textContent="";
+    ["علمي","أدبي"].forEach(function(k){
+      var b=el("button",k===selT?"on":"",k);
+      b.onclick=function(){selT=k;tryApply();};
+      t.appendChild(b);
+    });
+    $("gradeAsk").style.display=pending?"flex":"none";
+    if(pending){$("gradeNote").textContent="سيتم استبدال موادك الحالية بمواد الصف المختار.";return;}
+    $("gradeNote").textContent=hi&&!selT?"اختر المسار لعرض المواد.":(S.grade?"تقدر تضيف أو تحذف أي مادة بعد الاختيار.":"موادك الحالية ما تتغير إلا إذا اخترت صفًا.");
   }
 
   /* subjects */
@@ -393,7 +461,7 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none
   };
   $("resetBtn").onclick=function(){clearInterval(tick);tick=null;phase="work";total=left=WORK;drawTimer();};
 
-  function renderAll(){fillSelects();renderSubjects();renderSlots();renderTasks();renderExams();drawTimer();}
+  function renderAll(){fillSelects();renderGrades();renderSubjects();renderSlots();renderTasks();renderExams();drawTimer();}
   renderAll();
 })();
 </script>
