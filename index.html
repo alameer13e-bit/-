@@ -98,7 +98,14 @@ button.cell small{font-size:10.5px;font-weight:500;opacity:.8}
 .sheet-box label{display:flex;align-items:center;gap:8px;flex:1}
 .sheet-box label input{flex:1}
 .err{color:#C0392B;font-size:14px;margin:8px 0 0;min-height:1px}
-@media (prefers-reduced-motion: reduce){.ring i{transition:none}}
+/* time-up screen */
+.done{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;background:var(--accent);color:var(--accent-ink);animation:blink 1s ease-in-out infinite alternate}
+.done[hidden]{display:none}
+.done h2{margin:0;font-size:36px;font-weight:800}
+.done p{margin:0;font-size:18px;font-weight:500}
+.done .btn{background:var(--surface);color:var(--ink);font-size:18px;padding:12px 40px;margin-top:10px}
+@keyframes blink{from{filter:brightness(1)}to{filter:brightness(1.25)}}
+@media (prefers-reduced-motion: reduce){.ring i{transition:none}.done{animation:none}}
 </style>
 </head>
 <body>
@@ -258,6 +265,12 @@ button.cell small{font-size:10.5px;font-weight:500;opacity:.8}
       <button class="btn ghost" id="shClear">مسح الخانة</button>
     </div>
   </div>
+</div>
+
+<div class="done" id="done" role="alertdialog" aria-modal="true" aria-labelledby="doneT" hidden>
+  <h2 id="doneT"></h2>
+  <p id="doneS"></p>
+  <button class="btn" id="doneOk">تمام</button>
 </div>
 
 <nav>
@@ -592,7 +605,7 @@ button.cell small{font-size:10.5px;font-weight:500;opacity:.8}
   };
 
   /* pomodoro */
-  var WORK=(S.work||25)*60,REST=(S.rest||5)*60,phase="work",left=WORK,total=WORK,tick=null,startedAt=0;
+  var WORK=(S.work||25)*60,REST=(S.rest||5)*60,phase="work",left=WORK,total=WORK,tick=null,startedAt=0,endAt=0,doneOn=false;
   function fmt(n){var m=Math.floor(n/60),s=n%60;return (m<10?"0":"")+m+":"+(s<10?"0":"")+s;}
   function clock(ms){var d=new Date(ms),h=d.getHours(),m=d.getMinutes();return (h%12||12)+":"+(m<10?"0":"")+m+(h>=12?" م":" ص");}
   function drawRange(){
@@ -607,7 +620,7 @@ button.cell small{font-size:10.5px;font-weight:500;opacity:.8}
     $("startBtn").textContent=tick?"إيقاف مؤقت":"ابدأ";
     var n=S.pomos[dkey(now)]||0;
     $("count").textContent=n?("جلسات اليوم: "+n):"ابدأ أول جلسة اليوم";
-    document.title=tick?fmt(left)+" · برنامج المذاكرة":"برنامج المذاكرة";
+    document.title=doneOn?"⏰ خلص الوقت":(tick?fmt(left)+" · برنامج المذاكرة":"برنامج المذاكرة");
     drawRange();
   }
   function beep(){
@@ -615,16 +628,25 @@ button.cell small{font-size:10.5px;font-weight:500;opacity:.8}
     o.connect(g);g.connect(a.destination);o.frequency.value=660;g.gain.value=.15;o.start();o.stop(a.currentTime+.4);}catch(e){}
     if(navigator.vibrate)navigator.vibrate([200,100,200]);
   }
+  function showDone(w){
+    $("doneT").textContent=w?"خلص وقت المذاكرة! 🎉":"خلصت الراحة ⏰";
+    $("doneS").textContent=w?"خذ راحتك الحين":"يلا نرجع نذاكر";
+    $("done").hidden=false;doneOn=true;
+  }
+  function hideDone(){$("done").hidden=true;doneOn=false;}
   function step(){
-    left--;
+    left=Math.max(0,Math.round((endAt-Date.now())/1000));
     if(left<=0){
+      var w=phase==="work";
       beep();
-      if(phase==="work"){S.pomos[dkey(now)]=(S.pomos[dkey(now)]||0)+1;save();phase="rest";total=left=REST;}
+      if(w){S.pomos[dkey(now)]=(S.pomos[dkey(now)]||0)+1;save();phase="rest";total=left=REST;}
       else{phase="work";total=left=WORK;}
-      clearInterval(tick);tick=null;
+      clearInterval(tick);tick=null;showDone(w);
     }
     drawTimer();
   }
+  document.addEventListener("visibilitychange",function(){if(!document.hidden&&tick)step();});
+  $("doneOk").onclick=function(){hideDone();drawTimer();};
   $("wMin").value=WORK/60;$("rMin").value=REST/60;
   function applyMins(){
     var w=Math.max(1,Math.min(180,parseInt($("wMin").value,10)||25)),r=Math.max(1,Math.min(60,parseInt($("rMin").value,10)||5));
@@ -636,10 +658,11 @@ button.cell small{font-size:10.5px;font-weight:500;opacity:.8}
   $("wMin").onchange=applyMins;$("rMin").onchange=applyMins;
   setInterval(function(){if(!tick)drawRange();},15000);
   $("startBtn").onclick=function(){
-    if(tick){clearInterval(tick);tick=null;}else{startedAt=Date.now();tick=setInterval(step,1000);}
+    if(tick){step();if(tick){clearInterval(tick);tick=null;}}
+    else{startedAt=Date.now();endAt=startedAt+left*1000;tick=setInterval(step,1000);}
     drawTimer();
   };
-  $("resetBtn").onclick=function(){clearInterval(tick);tick=null;phase="work";total=left=WORK;drawTimer();};
+  $("resetBtn").onclick=function(){clearInterval(tick);tick=null;hideDone();phase="work";total=left=WORK;drawTimer();};
 
   function renderAll(){fillSelects();renderGrades();renderSubjects();renderGrid();renderSlots();renderTasks();renderExams();drawTimer();}
   renderAll();
