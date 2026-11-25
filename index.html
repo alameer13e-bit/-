@@ -66,14 +66,15 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none
 .sub .chip{display:inline-flex;align-items:center;gap:4px;font-size:14px;color:var(--ink)}
 .note{color:var(--muted);font-size:14px;margin:8px 2px}
 /* final */
-.pending{display:flex;align-items:center;gap:10px;margin:12px 0;padding:14px 16px;border-radius:18px;background:#FFF1D6;color:#8A5A00;font-weight:500}
-@media (prefers-color-scheme: dark){.pending{background:#2E1D05;color:#E0A33A}}
-.stage-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
-.stage-head h2{margin:0}
-.stage-head span{font-size:13px;color:var(--muted)}
-.term{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid var(--line);margin-top:10px;padding-top:10px;font-size:15px}
-.term span:first-child{color:var(--muted)}
-.term span:last-child{font-weight:700}
+.fx{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.fx .dt{width:72px;text-align:center;font-weight:800;font-size:14px;line-height:1.35}
+.fx .dt small{display:block;color:var(--muted);font-weight:500;font-size:12px}
+.fx .sj{flex:1;font-weight:700;border-inline-start:6px solid var(--line);padding-inline-start:10px;line-height:1.4}
+.fx .tm{text-align:center;font-size:13px;white-space:nowrap}
+.fx .tm small{display:block;color:var(--muted);font-size:11.5px}
+.fx.rest{justify-content:center;background:#FFF1D6;color:#8A5A00;font-weight:700;border:0;border-radius:12px;margin:6px 0;padding:10px}
+.fx.today{outline:2px solid var(--accent);outline-offset:2px;border-radius:12px;padding-inline:8px}
+@media (prefers-color-scheme: dark){.fx.rest{background:#2E1D05;color:#E0A33A}}
 .gr{display:flex;flex-wrap:wrap;gap:8px}
 .gr button{border:1px solid var(--line);background:var(--soft);color:var(--ink);font:inherit;font-size:14px;border-radius:12px;padding:6px 14px;cursor:pointer}
 .gr button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
@@ -200,27 +201,12 @@ button.cell small{font-size:10.5px;font-weight:500;opacity:.8}
 
   <!-- الفاينل -->
   <section id="s-final">
-    <div class="pending"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 7h11"/><path d="M6.5 17h11"/><path d="M6 20v-2a6 6 0 1 1 12 0v2a1 1 0 0 1-1 1h-10a1 1 0 0 1-1-1z"/><path d="M6 4v2a6 6 0 1 0 12 0v-2a1 1 0 0 0-1-1h-10a1 1 0 0 0-1 1z"/></svg><span>جدول الاختبارات</span></div>
     <div class="card">
-      <div class="stage-head"><h2>المرحلة الابتدائية</h2><span>الصف الرابع والخامس</span></div>
-      <div class="term"><span>الفصل الأول</span><span>٢٠ إلى ٢٨ ديسمبر ٢٠٢٦</span></div>
-      <div class="term"><span>الفصل الثاني</span><span>٢٣ إلى ٣١ مايو ٢٠٢٧</span></div>
+      <h2>جدول امتحانات نهاية الفترة الأولى</h2>
+      <p class="note" style="margin:0 0 10px">العام الدراسي ٢٠٢٦/٢٠٢٧</p>
+      <div class="gr" id="finGrades"></div>
     </div>
-    <div class="card">
-      <div class="stage-head"><h2>المرحلة المتوسطة</h2><span>جميع الصفوف</span></div>
-      <div class="term"><span>الفصل الأول</span><span>٢٠ إلى ٢٨ ديسمبر ٢٠٢٦</span></div>
-      <div class="term"><span>الفصل الثاني</span><span>٢٣ إلى ٣١ مايو ٢٠٢٧</span></div>
-    </div>
-    <div class="card">
-      <div class="stage-head"><h2>العاشر والحادي عشر</h2><span>المرحلة الثانوية</span></div>
-      <div class="term"><span>الفصل الأول</span><span>٢٠ إلى ٣١ ديسمبر ٢٠٢٦</span></div>
-      <div class="term"><span>الفصل الثاني</span><span>٢٣ مايو إلى ٣ يونيو ٢٠٢٧</span></div>
-    </div>
-    <div class="card">
-      <div class="stage-head"><h2>الصف الثاني عشر</h2><span>المرحلة الثانوية</span></div>
-      <div class="term"><span>الفصل الأول</span><span>١٠ إلى ٢١ يناير ٢٠٢٧</span></div>
-      <div class="term"><span>الفصل الثاني</span><span>٧ إلى ٢١ يونيو ٢٠٢٧</span></div>
-    </div>
+    <div id="finTable"></div>
   </section>
 
   <!-- المواد -->
@@ -548,6 +534,55 @@ button.cell small{font-size:10.5px;font-weight:500;opacity:.8}
     clearT=setTimeout(function(){clearT=null;b.textContent="مسح الجدول";},4000);
   };
 
+  /* final exam schedules (نهاية الفترة الأولى 2026/2027) */
+  var AR="اللغة العربية",EN="اللغة الإنجليزية",IS="التربية الإسلامية",MA="الرياضيات",SC="العلوم",SO="الاجتماعيات",PH="الفيزياء",CH="الكيمياء",BI="الأحياء",FR="اللغة الفرنسية",ST="الإحصاء";
+  function A(m,d,s,e){return [(m===1?2027:2026)+"-"+(m<10?"0":"")+m+"-"+d,s||"",e||""];}
+  var FIN={
+    "السادس":[A(12,20,MA,"10:15"),A(12,21,AR,"09:45"),A(12,22),A(12,23,SC,"10:15"),A(12,24,EN,"10:15"),A(12,27,SO,"09:45"),A(12,28,IS,"09:45")],
+    "السابع":[A(12,20,SC,"10:15"),A(12,21,AR,"09:45"),A(12,22),A(12,23,MA,"10:15"),A(12,24,IS,"09:45"),A(12,27,SO,"09:45"),A(12,28,EN,"10:15")],
+    "الثامن":[A(12,20,MA,"10:15"),A(12,21,SO,"09:45"),A(12,22),A(12,23,SC,"10:15"),A(12,24,EN,"10:15"),A(12,27,IS,"09:45"),A(12,28,AR,"09:45")],
+    "التاسع":[A(12,20,SC,"10:15"),A(12,21,EN,"10:15"),A(12,22),A(12,23,MA,"10:15"),A(12,24,AR,"09:45"),A(12,27,IS,"09:45"),A(12,28,SO,"09:45")],
+    "العاشر":[A(12,20,PH,"10:15"),A(12,21,EN,"11:15"),A(12,22),A(12,23,BI,"10:15"),A(12,24,"تاريخ الكويت","10:15"),A(12,27,MA,"10:45"),A(12,28,IS,"10:15"),A(12,29),A(12,30,CH,"10:15"),A(12,31,AR,"10:15")],
+    "الحادي عشر علمي":[A(12,20,MA,"10:45"),A(12,21,IS,"10:15"),A(12,22),A(12,23,CH,"10:15"),A(12,24,AR,"10:15"),A(12,27,PH,"10:15"),A(12,28,"جيولوجيا","10:15"),A(12,29),A(12,30,BI,"10:15"),A(12,31,EN,"11:15")],
+    "الحادي عشر أدبي":[A(12,20,"مبادئ علم الجغرافيا وعلم الاقتصاد","10:15"),A(12,21,IS,"10:15"),A(12,22),A(12,23,FR,"10:15"),A(12,24,AR,"10:15"),A(12,27,"التاريخ الإسلامي","10:15"),A(12,28,ST,"10:15"),A(12,29),A(12,30,"مبادئ علم النفس وعلم الاجتماع","10:15"),A(12,31,EN,"11:15")],
+    "الثاني عشر علمي":[A(1,10,MA,"10:45"),A(1,11,AR,"10:15"),A(1,12),A(1,13,BI,"10:15"),A(1,14,EN,"11:15"),A(1,17,PH,"10:15"),A(1,18,IS,"10:15"),A(1,19),A(1,20,CH,"10:15")],
+    "الثاني عشر أدبي":[A(1,10,FR,"10:15"),A(1,11,AR,"10:15"),A(1,12),A(1,13,"قضايا البيئية والتنمية المعاصرة","10:15"),A(1,14,EN,"11:15"),A(1,17,"الفلسفة","10:15"),A(1,18,IS,"10:15"),A(1,19),A(1,20,"تاريخ العالم الحديث والمعاصر","10:15"),A(1,21,ST,"10:15")]
+  };
+  function durT(f,t){
+    var a=f.split(":"),b=t.split(":"),m=(+b[0]*60+ +b[1])-(+a[0]*60+ +a[1]),h=Math.floor(m/60),r=m%60;
+    var H=["","ساعة","ساعتان","ثلاث ساعات"][h]||(h+" ساعات");
+    return r===0?H:r===15?H+" وربع":r===30?H+" ونصف":H+" و"+r+" دقيقة";
+  }
+  function finDefault(){
+    if(S.finSel&&FIN[S.finSel])return S.finSel;
+    var g=S.grade,t=S.track;
+    if(FIN[g])return g;
+    if(g==="الحادي عشر"||g==="الثاني عشر")return g+" "+(t||"علمي");
+    return "التاسع";
+  }
+  function renderFinal(){
+    var sel=finDefault(),box=$("finGrades");box.textContent="";
+    Object.keys(FIN).forEach(function(k){
+      var b=el("button",k===sel?"on":"","الصف "+k);
+      b.onclick=function(){S.finSel=k;save();renderFinal();};
+      box.appendChild(b);
+    });
+    var t=$("finTable");t.textContent="";
+    var card=el("div","card");card.appendChild(el("h2",null,"الصف "+sel));
+    FIN[sel].forEach(function(r){
+      var d=new Date(r[0]+"T00:00:00"),w=d.toLocaleDateString("ar",{weekday:"long"}),dm=d.toLocaleDateString("ar",{day:"numeric",month:"long"});
+      var row=el("div","fx"+(r[1]?"":" rest")+(r[0]===dkey(now)?" today":""));
+      if(!r[1]){row.textContent=w+" "+dm+" · يوم راحة";}
+      else{
+        var dt=el("div","dt",w);dt.appendChild(el("small",null,dm));row.appendChild(dt);
+        var sj=el("div","sj",r[1]);sj.style.borderInlineStartColor=gcol(r[1]);row.appendChild(sj);
+        var tm=el("div","tm",rng({f:"08:00",t:r[2]}));tm.appendChild(el("small",null,durT("08:00",r[2])));row.appendChild(tm);
+      }
+      card.appendChild(row);
+    });
+    t.appendChild(card);
+  }
+
   /* tasks */
   function renderTasks(){
     var ul=$("tasks");ul.textContent="";
@@ -664,7 +699,7 @@ button.cell small{font-size:10.5px;font-weight:500;opacity:.8}
   };
   $("resetBtn").onclick=function(){clearInterval(tick);tick=null;hideDone();phase="work";total=left=WORK;drawTimer();};
 
-  function renderAll(){fillSelects();renderGrades();renderSubjects();renderGrid();renderSlots();renderTasks();renderExams();drawTimer();}
+  function renderAll(){fillSelects();renderGrades();renderSubjects();renderGrid();renderFinal();renderSlots();renderTasks();renderExams();drawTimer();}
   renderAll();
 })();
 </script>
